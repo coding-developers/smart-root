@@ -1,0 +1,144 @@
+:root {
+  --verde: #16a34a;
+  --verde-escuro: #15803d;
+  --verde-claro: #f0fdf4;
+  --cinza: #6b7280;
+  --cinza-claro: #e5e7eb;
+  --vermelho: #dc2626;
+  --borda: #e5e7eb;
+  --fundo: #f9fafb;
+  --texto: #111827;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--fundo);
+  color: var(--texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------------- layout -- */
+.app { min-height: 100vh; padding-bottom: 64px; }
+
+.topo {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--verde); color: #fff;
+  padding-top: max(14px, env(safe-area-inset-top));
+}
+.logo { color: #fff; text-decoration: none; font-weight: 700; font-size: 18px; }
+.topo-dir { display: flex; align-items: center; gap: 12px; }
+.ola { font-size: 14px; opacity: 0.9; }
+
+.conteudo { padding: 18px; max-width: 640px; margin: 0 auto; }
+
+.rodape-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; background: #fff; border-top: 1px solid var(--borda);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.rodape-nav a {
+  flex: 1; text-align: center; padding: 14px; text-decoration: none;
+  color: var(--cinza); font-size: 14px; font-weight: 600;
+}
+.rodape-nav a.active { color: var(--verde); }
+
+.centro {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 18px;
+}
+
+/* ---------------------------------------------------------------- cartões -- */
+.cartao {
+  background: #fff; border: 1px solid var(--borda); border-radius: 14px;
+  padding: 16px; margin-bottom: 12px;
+}
+
+.form { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
+.form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; color: #374151; }
+.form input, .form textarea {
+  font: inherit; padding: 12px; border: 1px solid var(--cinza-claro); border-radius: 10px;
+  font-weight: 400;
+}
+.form input:focus, .form textarea:focus { outline: 2px solid var(--verde); border-color: var(--verde); }
+
+.form-inline { display: flex; gap: 8px; }
+.form-inline input { flex: 1; padding: 12px; border: 1px solid var(--cinza-claro); border-radius: 10px; font: inherit; }
+
+.marca { font-size: 26px; text-align: center; }
+.subtitulo { text-align: center; color: var(--cinza); font-size: 14px; }
+.rodape-form { text-align: center; font-size: 14px; color: var(--cinza); }
+.rodape-form a, a.voltar { color: var(--verde); font-weight: 600; }
+
+/* ---------------------------------------------------------------- botões -- */
+.botao {
+  font: inherit; font-weight: 700; border: none; border-radius: 10px;
+  padding: 12px 16px; cursor: pointer; transition: opacity .15s;
+}
+.botao:disabled { opacity: .5; cursor: not-allowed; }
+.botao.primario { background: var(--verde); color: #fff; }
+.botao.secundario { background: #fff; color: var(--texto); border: 1px solid var(--cinza-claro); }
+.botao.pequeno { padding: 8px 12px; font-size: 14px; }
+.botao.grande { padding: 18px; font-size: 17px; flex: 1; }
+.link-btn { background: none; border: none; color: #fff; font: inherit; cursor: pointer; text-decoration: underline; }
+.link-btn.perigo { color: var(--vermelho); }
+
+.botoes-irrigar { display: flex; gap: 10px; margin: 16px 0; }
+
+/* ---------------------------------------------------------------- listas -- */
+.cabecalho-secao { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 12px; }
+.lista { list-style: none; }
+
+.item-jardim {
+  display: flex; align-items: center; justify-content: space-between;
+  text-decoration: none; color: var(--texto);
+}
+.item-jardim .seta { font-size: 24px; color: var(--cinza); }
+.meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+.tag {
+  font-size: 12px; padding: 3px 8px; border-radius: 999px; font-weight: 600;
+  background: var(--cinza-claro); color: #374151;
+}
+.tag.online { background: #dcfce7; color: var(--verde-escuro); }
+.tag.offline { background: #fee2e2; color: var(--vermelho); }
+.tag.sem-placa { background: #fef3c7; color: #92400e; }
+.tag.irrigando { background: #dbeafe; color: #1e40af; }
+.tag.dia { background: var(--verde-claro); color: var(--verde-escuro); }
+.tag.status-aberto { background: #dbeafe; color: #1e40af; }
+.tag.status-em_andamento { background: #fef3c7; color: #92400e; }
+.tag.status-fechado { background: var(--cinza-claro); color: #374151; }
+
+/* ---------------------------------------------------------------- status -- */
+.painel-status { display: flex; gap: 16px; }
+.painel-status > div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.rotulo { font-size: 12px; color: var(--cinza); text-transform: uppercase; letter-spacing: .03em; }
+.painel-status strong { font-size: 18px; }
+.verde { color: var(--verde); }
+.cinza { color: var(--cinza); }
+
+.secao-horarios { margin-top: 24px; }
+.item-horario, .item-ticket { display: flex; align-items: center; justify-content: space-between; }
+.linha-horas { display: flex; gap: 12px; }
+.linha-horas label { flex: 1; }
+
+.dias { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  border: 1px solid var(--cinza-claro); background: #fff; border-radius: 999px;
+  padding: 8px 12px; font: inherit; font-size: 13px; cursor: pointer; font-weight: 600;
+}
+.chip.ativo { background: var(--verde); color: #fff; border-color: var(--verde); }
+
+/* ---------------------------------------------------------------- ticket -- */
+.item-ticket { flex-direction: column; align-items: stretch; gap: 6px; }
+.ticket-topo { display: flex; align-items: center; justify-content: space-between; }
+.data { font-size: 12px; color: var(--cinza); }
+
+/* ---------------------------------------------------------------- avisos -- */
+.erro { color: var(--vermelho); font-size: 14px; }
+.ok { color: var(--verde); font-size: 14px; }
+.suave { color: var(--cinza); }
+.aviso { background: #fef3c7; color: #92400e; padding: 12px; border-radius: 10px; font-size: 14px; margin: 12px 0; }
+h1 { font-size: 22px; } h2 { font-size: 18px; }
