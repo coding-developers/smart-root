@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { tempoDesde, usePolling } from '../hooks/usePolling.js'
 
@@ -12,16 +12,18 @@ const ESPERA_MAXIMA    = 20000   // depois disso, desiste de esperar a confirma�
 
 export default function GardenDetail() {
   const { id } = useParams()
+  const navegar = useNavigate()
   const [horarios, setHorarios] = useState([])
   const [erro, setErro] = useState('')
   const [msg, setMsg] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [aguardando, setAguardando] = useState(null)   // { acao } enquanto a placa não confirma
+  const [editando, setEditando] = useState(false)
 
   // ------------------------------------------------------- status ao vivo --
   const buscarJardim = useCallback(() => api.get(`/gardens/${id}`), [id])
   const [intervalo, setIntervalo] = useState(INTERVALO_PADRAO)
-  const { dados: jardim, erro: erroStatus, carregando, atualizadoEm, refrescar } =
+  const { dados: jardim, erro: erroStatus, carregando, atualizadoEm, refrescar, setDados } =
     usePolling(buscarJardim, { intervalo })
 
   const temPlaca = !!jardim?.device
@@ -99,8 +101,25 @@ export default function GardenDetail() {
   return (
     <div>
       <Voltar />
-      <h1>{jardim.nome}</h1>
-      {jardim.descricao && <p className="suave">{jardim.descricao}</p>}
+      <div className="cabecalho-secao titulo-jardim">
+        <h1>{jardim.nome}</h1>
+        <button className="botao secundario pequeno" onClick={() => { setEditando(!editando); setMsg(''); setErro('') }}>
+          {editando ? 'Cancelar' : 'Editar'}
+        </button>
+      </div>
+      {!editando && jardim.descricao && <p className="suave">{jardim.descricao}</p>}
+
+      {editando && (
+        <FormEditarJardim
+          jardim={jardim}
+          aoSalvar={(atualizado) => {
+            setDados(atualizado)          // reflete na hora; o polling confirma depois
+            setEditando(false)
+            setMsg('Jardim atualizado')
+          }}
+          setErro={setErro}
+        />
+      )}
 
       <div className="cartao painel-status">
         <div>
@@ -161,7 +180,105 @@ export default function GardenDetail() {
       {erro && <p className="erro">{erro}</p>}
 
       <Horarios gardenId={id} horarios={horarios} aoMudar={carregarHorarios} setErro={setErro} />
+
+      <ZonaPerigo
+        jardim={jardim}
+        aoExcluir={() => navegar('/', { replace: true })}
+        setErro={setErro}
+      />
     </div>
+  )
+}
+
+/** Renomear / mudar a descrição. Monta com os valores atuais e não é tocado pelo polling. */
+function FormEditarJardim({ jardim, aoSalvar, setErro }) {
+  const [nome, setNome] = useState(jardim.nome)
+  const [descricao, setDescricao] = useState(jardim.descricao || '')
+  const [salvando, setSalvando] = useState(false)
+
+  async function salvar(e) {
+    e.preventDefault()
+    if (!nome.trim()) return
+    setErro('')
+    setSalvando(true)
+    try {
+      const atualizado = await api.put(`/gardens/${jardim.id}`, {
+        nome: nome.trim(),
+        descricao: descricao.trim() || null,
+      })
+      aoSalvar(atualizado)
+    } catch (err) {
+      setErro(err.message)
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  return (
+    <form className="cartao form" onSubmit={salvar}>
+      <label>Nome
+        <input value={nome} onChange={(e) => setNome(e.target.value)}
+               maxLength={120} required autoFocus />
+      </label>
+      <label>Descrição
+        <input value={descricao} onChange={(e) => setDescricao(e.target.value)}
+               placeholder="Opcional (ex: canteiro dos fundos)" />
+      </label>
+      <button className="botao primario" disabled={salvando}>
+        {salvando ? 'Salvando…' : 'Salvar alterações'}
+      </button>
+    </form>
+  )
+}
+
+/** Exclusão em dois toques — nada de apagar jardim por esbarrão no celular. */
+function ZonaPerigo({ jardim, aoExcluir, setErro }) {
+  const [confirmando, setConfirmando] = useState(false)
+  const [apagando, setApagando] = useState(false)
+
+  async function excluir() {
+    setErro('')
+    setApagando(true)
+    try {
+      await api.del(`/gardens/${jardim.id}`)
+      aoExcluir()
+    } catch (err) {
+      setErro(err.message)
+      setApagando(false)
+      setConfirmando(false)
+    }
+  }
+
+  return (
+    <section className="cartao zona-perigo">
+      {!confirmando ? (
+        <>
+          <div>
+            <strong>Excluir jardim</strong>
+            <p className="suave">Apaga os horários e o histórico deste jardim. A placa não é apagada.</p>
+          </div>
+          <button className="link-btn perigo" onClick={() => setConfirmando(true)}>Excluir</button>
+        </>
+      ) : (
+        <>
+          <div>
+            <strong>Excluir “{jardim.nome}”?</strong>
+            <p className="suave">
+              {jardim.irrigando
+                ? 'A irrigação em curso será desligada e a agenda apagada da placa. Não dá para desfazer.'
+                : 'Os horários saem da placa junto. Não dá para desfazer.'}
+            </p>
+          </div>
+          <div className="acoes-perigo">
+            <button className="botao secundario pequeno" disabled={apagando}
+                    onClick={() => setConfirmando(false)}>Cancelar</button>
+            <button className="botao pequeno perigo" disabled={apagando} onClick={excluir}>
+              {apagando ? 'Excluindo…' : 'Excluir mesmo'}
+            </button>
+          </div>
+        </>
+      )}
+    </section>
   )
 }
 

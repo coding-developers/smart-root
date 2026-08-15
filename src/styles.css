@@ -53,7 +53,11 @@ body {
   background: var(--fundo);
   color: var(--texto);
   -webkit-font-smoothing: antialiased;
+  /* dvh, não vh: no celular 100vh é a viewport GRANDE (como se a barra de
+     endereço estivesse escondida), então o documento nasce mais alto que a
+     área visível e a página rola sozinha alguns pixels. */
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
 }
 
@@ -89,7 +93,11 @@ body::after {
 }
 
 /* ---------------------------------------------------------------- layout -- */
-.app { min-height: 100vh; padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: calc(74px + env(safe-area-inset-bottom));
+}
 
 .topo {
   position: sticky; top: 0; z-index: 10;
@@ -285,6 +293,14 @@ a.voltar {
   box-shadow: 0 0 18px rgba(53, 208, 255, .2);
 }
 .botao.pequeno { min-height: 38px; padding: 8px 13px; font-size: var(--txt-xs); letter-spacing: .08em; }
+.botao.perigo {
+  background: rgba(255, 77, 109, .12); color: #ffb3c1;
+  border-color: rgba(255, 77, 109, .5);
+}
+.botao.perigo:hover:not(:disabled) {
+  background: rgba(255, 77, 109, .22); border-color: var(--vermelho); color: #fff;
+  box-shadow: 0 0 18px rgba(255, 77, 109, .28);
+}
 .botao.grande {
   flex: 1 1 140px; min-height: 58px; padding: 16px 12px;
   font-size: clamp(13px, 3.8vw, 14.5px); letter-spacing: .1em;
@@ -387,6 +403,21 @@ a.voltar {
   color: #eafff8; border-color: rgba(34, 229, 165, .6);
   box-shadow: 0 0 16px rgba(34, 229, 165, .25);
 }
+
+/* O h1 tem gradiente no texto; sem min-width:0 ele empurra o botão para fora. */
+.titulo-jardim { margin: 0 0 10px; align-items: flex-start; }
+.titulo-jardim h1 { flex: 1 1 200px; min-width: 0; }
+.titulo-jardim .botao { flex-shrink: 0; }
+
+.zona-perigo {
+  margin-top: 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  border-color: rgba(255, 77, 109, .28);
+}
+.zona-perigo > div:first-child { flex: 1 1 200px; min-width: 0; }
+.zona-perigo strong { font-size: var(--txt-md); color: #ffb3c1; }
+.zona-perigo p { font-size: var(--txt-sm); margin-top: 4px; line-height: 1.5; }
+.acoes-perigo { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ---------------------------------------------------------------- ticket -- */
 .item-ticket { flex-direction: column; align-items: stretch; gap: 8px; }
