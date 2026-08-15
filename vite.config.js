@@ -11,9 +11,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Irrigação — Smart Root',
-        short_name: 'Irrigação',
+        name: 'Smart Root',
+        short_name: 'Smart Root',   // é este que aparece embaixo do ícone na tela inicial
         description: 'Controle a irrigação dos seus jardins',
+        lang: 'pt-BR',
         theme_color: '#050b14',
         background_color: '#050b14',
         display: 'standalone',
@@ -21,7 +22,7 @@ export default defineConfig({
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),
