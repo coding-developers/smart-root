@@ -27,11 +27,18 @@ async function request(method, path, body) {
   const token = getToken()
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(BASE + path, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  // fetch só rejeita quando a rede falha (backend fora do ar, URL do ngrok velha,
+  // celular sem sinal). Traduzimos para uma mensagem legível — o polling exibe isso.
+  let res
+  try {
+    res = await fetch(BASE + path, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+  } catch {
+    throw new ApiError(0, 'sem conexão com o servidor')
+  }
 
   if (res.status === 204) return null
 

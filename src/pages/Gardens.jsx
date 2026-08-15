@@ -1,37 +1,38 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api.js'
+import { usePolling } from '../hooks/usePolling.js'
+
+// A lista é só panorama: 15 s já mantém os selos de status honestos sem pesar.
+const INTERVALO = 15000
 
 export default function Gardens() {
-  const [jardins, setJardins] = useState(null)
   const [erro, setErro] = useState('')
   const [criando, setCriando] = useState(false)
   const [nome, setNome] = useState('')
 
-  async function carregar() {
-    try {
-      setJardins(await api.get('/gardens'))
-    } catch (err) {
-      setErro(err.message)
-    }
-  }
-  useEffect(() => { carregar() }, [])
+  const buscar = useCallback(() => api.get('/gardens'), [])
+  const { dados: jardins, erro: erroStatus, carregando, refrescar } =
+    usePolling(buscar, { intervalo: INTERVALO })
 
   async function criar(e) {
     e.preventDefault()
     if (!nome.trim()) return
+    setErro('')
     try {
       await api.post('/gardens', { nome: nome.trim() })
       setNome('')
       setCriando(false)
-      carregar()
+      refrescar()
     } catch (err) {
       setErro(err.message)
     }
   }
 
-  if (erro) return <p className="erro">{erro}</p>
-  if (jardins === null) return <p className="suave">Carregando jardins…</p>
+  if (carregando && !jardins) return <p className="suave">Carregando jardins…</p>
+  if (!jardins) return <p className="erro">{erroStatus}</p>
+
+  const online = jardins.filter((j) => j.device?.status === 'online').length
 
   return (
     <div>
@@ -41,6 +42,20 @@ export default function Gardens() {
           {criando ? 'Cancelar' : '+ Novo'}
         </button>
       </div>
+
+      {jardins.length > 0 && (
+        <div className={`monitor ${erroStatus ? 'com-erro' : ''}`}>
+          <span className="ponto-vivo" aria-hidden="true" />
+          <span>
+            {erroStatus
+              ? 'Sem contato com o servidor — tentando de novo'
+              : `${online} de ${jardins.length} placa(s) online`}
+          </span>
+          <button type="button" className="link-btn" onClick={refrescar}>Atualizar</button>
+        </div>
+      )}
+
+      {erro && <p className="erro">{erro}</p>}
 
       {criando && (
         <form className="cartao form-inline" onSubmit={criar}>

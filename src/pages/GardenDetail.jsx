@@ -1,46 +1,100 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
+import { tempoDesde, usePolling } from '../hooks/usePolling.js'
 
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
+const INTERVALO_PADRAO = 10000   // placa em repouso: confere a cada 10 s
+const INTERVALO_BUSCA  = 4000    // placa offline: procura mais de perto
+const INTERVALO_RAPIDO = 2000    // esperando a placa confirmar um comando
+const ESPERA_MAXIMA    = 20000   // depois disso, desiste de esperar a confirmação
+
 export default function GardenDetail() {
   const { id } = useParams()
-  const [jardim, setJardim] = useState(null)
   const [horarios, setHorarios] = useState([])
   const [erro, setErro] = useState('')
   const [msg, setMsg] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [aguardando, setAguardando] = useState(null)   // { acao } enquanto a placa não confirma
 
-  async function carregar() {
-    try {
-      const [j, h] = await Promise.all([
-        api.get(`/gardens/${id}`),
-        api.get(`/gardens/${id}/schedules`),
-      ])
-      setJardim(j)
-      setHorarios(h)
-    } catch (err) {
-      setErro(err.message)
+  // ------------------------------------------------------- status ao vivo --
+  const buscarJardim = useCallback(() => api.get(`/gardens/${id}`), [id])
+  const [intervalo, setIntervalo] = useState(INTERVALO_PADRAO)
+  const { dados: jardim, erro: erroStatus, carregando, atualizadoEm, refrescar } =
+    usePolling(buscarJardim, { intervalo })
+
+  const temPlaca = !!jardim?.device
+  const online = jardim?.device?.status === 'online'
+  const podeIrrigar = temPlaca && online && !enviando
+
+  // Ritmo do polling: acelera esperando a confirmação, e fica de tocaia quando
+  // a placa está offline para liberar os botões assim que ela voltar.
+  useEffect(() => {
+    const alvo = aguardando ? INTERVALO_RAPIDO
+      : (temPlaca && !online) ? INTERVALO_BUSCA
+      : INTERVALO_PADRAO
+    setIntervalo((atual) => (atual === alvo ? atual : alvo))
+  }, [aguardando, temPlaca, online])
+
+  // Horários mudam só quando o usuário mexe — não precisam de polling.
+  const carregarHorarios = useCallback(() => {
+    api.get(`/gardens/${id}/schedules`).then(setHorarios).catch((e) => setErro(e.message))
+  }, [id])
+  useEffect(() => { carregarHorarios() }, [carregarHorarios])
+
+  // Confirmação do comando: o polling rápido roda até a placa refletir o estado.
+  useEffect(() => {
+    if (!aguardando || !jardim) return
+    const esperado = aguardando.acao === 'start'
+    if (jardim.irrigando === esperado) {
+      setAguardando(null)
+      setMsg(esperado ? 'Irrigação ligada — placa confirmou 💧' : 'Irrigação desligada — placa confirmou')
     }
-  }
-  useEffect(() => { carregar() }, [id])
+  }, [jardim, aguardando])
+
+  // Rede de segurança: se a placa não confirmar, para de esperar e avisa.
+  useEffect(() => {
+    if (!aguardando) return
+    const t = setTimeout(() => {
+      setAguardando(null)
+      // Em segundo plano o polling fica pausado, então não dá para culpar a placa.
+      if (document.hidden) return
+      setErro('A placa recebeu o comando mas não confirmou o novo estado. '
+            + 'Verifique se ela continua ligada e tente de novo.')
+    }, ESPERA_MAXIMA)
+    return () => clearTimeout(t)
+  }, [aguardando])
 
   async function irrigar(acao) {
-    setMsg('')
-    setErro('')
+    setMsg(''); setErro('')
+
+    // Só manda a requisição se a placa estiver online — offline o comando MQTT
+    // se perderia no caminho e o usuário ficaria achando que funcionou.
+    if (!temPlaca) { setErro('Este jardim ainda não tem uma placa associada.'); return }
+    if (!online) {
+      setErro('A placa está offline — nada foi enviado. Assim que ela voltar, o botão libera sozinho.')
+      refrescar()
+      return
+    }
+
+    setEnviando(true)
     try {
       await api.post(`/gardens/${id}/irrigate`, acao === 'start'
         ? { acao: 'start', duracao_seg: 600 }   // 10 min por padrão
         : { acao: 'stop' })
-      setMsg(acao === 'start' ? 'Comando de ligar enviado 💧' : 'Comando de desligar enviado')
-      setTimeout(carregar, 1200)   // dá tempo da placa reportar o novo status
+      setMsg(acao === 'start' ? 'Comando enviado — aguardando a placa…' : 'Desligando — aguardando a placa…')
+      setAguardando({ acao })
+      refrescar()
     } catch (err) {
       setErro(err.message)
+    } finally {
+      setEnviando(false)
     }
   }
 
-  if (erro) return <div><Voltar /><p className="erro">{erro}</p></div>
-  if (!jardim) return <p className="suave">Carregando…</p>
+  if (carregando && !jardim) return <p className="suave">Carregando…</p>
+  if (!jardim) return <div><Voltar /><p className="erro">{erroStatus || 'Jardim não encontrado'}</p></div>
 
   return (
     <div>
@@ -57,36 +111,88 @@ export default function GardenDetail() {
         </div>
         <div>
           <span className="rotulo">Placa</span>
-          {jardim.device
-            ? <strong className={jardim.device.status === 'online' ? 'verde' : 'cinza'}>
-                {jardim.device.status}
-              </strong>
+          {temPlaca
+            ? <strong className={online ? 'verde' : 'cinza'}>{jardim.device.status}</strong>
             : <strong className="cinza">não associada</strong>}
+          {temPlaca && jardim.device.ultima_vez && (
+            <span className="data">sinal {tempoDesde(jardim.device.ultima_vez)}</span>
+          )}
         </div>
       </div>
 
-      {!jardim.device && (
+      <BarraMonitor
+        erro={erroStatus}
+        atualizadoEm={atualizadoEm}
+        aguardando={!!aguardando}
+        aoAtualizar={refrescar}
+      />
+
+      {!temPlaca && (
         <p className="aviso">
           Este jardim ainda não tem uma placa associada. Peça ao administrador para
           vincular o dispositivo antes de irrigar.
         </p>
       )}
 
+      {temPlaca && !online && (
+        <div className="aviso banner-procura">
+          <span className="radar" aria-hidden="true" />
+          <div>
+            <strong>Placa offline — procurando…</strong>
+            <p>
+              O app checa a cada {INTERVALO_BUSCA / 1000} s e libera os botões sozinho
+              assim que ela voltar. Nenhum comando é enviado enquanto isso.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="botoes-irrigar">
-        <button className="botao grande primario" disabled={!jardim.device}
-                onClick={() => irrigar('start')}>Ligar agora</button>
-        <button className="botao grande secundario" disabled={!jardim.device}
-                onClick={() => irrigar('stop')}>Desligar</button>
+        <button className="botao grande primario" disabled={!podeIrrigar}
+                onClick={() => irrigar('start')}>
+          {aguardando?.acao === 'start' ? 'Ligando…' : 'Ligar agora'}
+        </button>
+        <button className="botao grande secundario" disabled={!podeIrrigar}
+                onClick={() => irrigar('stop')}>
+          {aguardando?.acao === 'stop' ? 'Desligando…' : 'Desligar'}
+        </button>
       </div>
       {msg && <p className="ok">{msg}</p>}
+      {erro && <p className="erro">{erro}</p>}
 
-      <Horarios gardenId={id} horarios={horarios} aoMudar={carregar} setErro={setErro} />
+      <Horarios gardenId={id} horarios={horarios} aoMudar={carregarHorarios} setErro={setErro} />
     </div>
   )
 }
 
 function Voltar() {
   return <Link to="/" className="voltar">‹ Meus jardins</Link>
+}
+
+/** Faixa fina com o "batimento" do polling: mostra que a tela está viva. */
+function BarraMonitor({ erro, atualizadoEm, aguardando, aoAtualizar }) {
+  const [, forcar] = useState(0)
+  // redesenha de tempos em tempos só para o "há Xs" não congelar
+  useEffect(() => {
+    const t = setInterval(() => forcar((n) => n + 1), 5000)
+    return () => clearInterval(t)
+  }, [])
+
+  const segundos = atualizadoEm ? Math.round((Date.now() - atualizadoEm) / 1000) : null
+
+  return (
+    <div className={`monitor ${erro ? 'com-erro' : ''}`}>
+      <span className="ponto-vivo" aria-hidden="true" />
+      <span>
+        {erro
+          ? `Sem contato com o servidor — tentando de novo (${erro})`
+          : aguardando
+            ? 'Aguardando a placa confirmar…'
+            : segundos === null ? 'Sincronizando…' : `Atualizado há ${segundos}s`}
+      </span>
+      <button type="button" className="link-btn" onClick={aoAtualizar}>Atualizar</button>
+    </div>
+  )
 }
 
 function Horarios({ gardenId, horarios, aoMudar, setErro }) {

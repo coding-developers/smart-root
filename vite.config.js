@@ -14,8 +14,8 @@ export default defineConfig({
         name: 'Irrigação — Smart Root',
         short_name: 'Irrigação',
         description: 'Controle a irrigação dos seus jardins',
-        theme_color: '#16a34a',
-        background_color: '#f0fdf4',
+        theme_color: '#050b14',
+        background_color: '#050b14',
         display: 'standalone',
         start_url: '/',
         icons: [
