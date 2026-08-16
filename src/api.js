@@ -20,6 +20,25 @@ class ApiError extends Error {
   }
 }
 
+/** Mensagem legível a partir do corpo de erro do FastAPI.
+ *
+ * Nos erros que o próprio código levanta (409, 404…) `detail` é uma string. Já
+ * no 422 do Pydantic ele é uma LISTA de campos — sem tratar esse caso, um
+ * "CPF inválido" chegava na tela como o genérico "Falha na requisição".
+ */
+function mensagemErro(data, status) {
+  const detail = data && data.detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail) && detail.length) {
+    return detail.map((d) => {
+      const campo = Array.isArray(d.loc) ? d.loc[d.loc.length - 1] : ''
+      const msg = String(d.msg || '').replace(/^Value error,\s*/, '')
+      return campo && campo !== 'body' ? `${campo}: ${msg}` : msg
+    }).join(' • ')
+  }
+  return `Erro ${status}`
+}
+
 async function request(method, path, body) {
   // ngrok-skip-browser-warning: evita a página de aviso do ngrok grátis nas
   // chamadas de API (inofensivo quando não se usa ngrok — o backend ignora).
@@ -49,10 +68,9 @@ async function request(method, path, body) {
   }
 
   if (!res.ok) {
-    const detail = data && data.detail ? data.detail : `Erro ${res.status}`
     // 401 = token inválido/expirado: derruba a sessão
     if (res.status === 401) setToken(null)
-    throw new ApiError(res.status, typeof detail === 'string' ? detail : 'Falha na requisição')
+    throw new ApiError(res.status, mensagemErro(data, res.status))
   }
   return data
 }

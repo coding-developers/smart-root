@@ -205,7 +205,7 @@ body::after {
   font-size: var(--txt-xs); font-weight: 700; color: var(--texto-fraco);
   text-transform: uppercase; letter-spacing: .11em;
 }
-.form input, .form textarea {
+.form input, .form textarea, .form select {
   font: inherit; font-family: var(--fonte-corpo);
   font-size: var(--txt-campo); font-weight: 400;
   text-transform: none; letter-spacing: normal;
@@ -216,11 +216,19 @@ body::after {
   border: 1px solid rgba(120, 200, 230, .22);
   transition: border-color .18s, box-shadow .18s, background .18s;
 }
+/* O menu nativo do select herda a cor do sistema, não a do tema — no Windows as
+   opções sairiam pretas sobre preto sem isto. */
+.form select option { background: #0b1828; color: var(--texto); }
 .form input::placeholder, .form textarea::placeholder { color: rgba(147, 170, 189, .65); }
-.form input:focus, .form textarea:focus {
+.form input:focus, .form textarea:focus, .form select:focus {
   outline: none; border-color: var(--verde); background: rgba(3, 10, 18, .9);
   box-shadow: 0 0 0 3px rgba(34, 229, 165, .14), 0 0 20px rgba(34, 229, 165, .18);
 }
+
+/* Dois campos curtos na mesma linha (nome/sobrenome, CPF/nascimento). Abaixo de
+   ~300px de largura útil eles quebram em coluna sozinhos. */
+.linha-dupla { display: flex; gap: 12px; flex-wrap: wrap; }
+.linha-dupla > label { flex: 1 1 130px; min-width: 0; }
 
 /* O .form acima é desenhado para as telas centralizadas (login/cadastro): estreito
    e sem margem. Quando ele entra no meio dos cards de uma página, precisa da
