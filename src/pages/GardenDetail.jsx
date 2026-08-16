@@ -215,7 +215,7 @@ function FormEditarJardim({ jardim, aoSalvar, setErro }) {
   }
 
   return (
-    <form className="cartao form" onSubmit={salvar}>
+    <form className="cartao form bloco" onSubmit={salvar}>
       <label>Nome
         <input value={nome} onChange={(e) => setNome(e.target.value)}
                maxLength={120} required autoFocus />
@@ -356,7 +356,7 @@ function Horarios({ gardenId, horarios, aoMudar, setErro }) {
       </div>
 
       {aberto && (
-        <form className="cartao form" onSubmit={adicionar}>
+        <form className="cartao form bloco" onSubmit={adicionar}>
           <div className="linha-horas">
             <label>Início<input type="time" value={inicio} onChange={(e) => setInicio(e.target.value)} required /></label>
             <label>Término<input type="time" value={fim} onChange={(e) => setFim(e.target.value)} required /></label>

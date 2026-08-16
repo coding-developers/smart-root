@@ -45,7 +45,7 @@ export default function Tickets() {
       </div>
 
       {aberto && (
-        <form className="cartao form" onSubmit={enviar}>
+        <form className="cartao form bloco" onSubmit={enviar}>
           <label>Assunto
             <input value={form.assunto} onChange={(e) => setForm({ ...form, assunto: e.target.value })}
                    required minLength={3} />

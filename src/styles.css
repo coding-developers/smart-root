@@ -222,6 +222,11 @@ body::after {
   box-shadow: 0 0 0 3px rgba(34, 229, 165, .14), 0 0 20px rgba(34, 229, 165, .18);
 }
 
+/* O .form acima é desenhado para as telas centralizadas (login/cadastro): estreito
+   e sem margem. Quando ele entra no meio dos cards de uma página, precisa da
+   mesma largura e do mesmo respiro dos vizinhos — é o que este modificador faz. */
+.form.bloco { max-width: none; margin: 0 0 12px; }
+
 .form-inline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .form-inline input {
   flex: 1 1 180px; min-width: 0;
